@@ -3,14 +3,12 @@
 import time
 import os
 import logging
-import shutil
+import subprocess
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from datetime import datetime
 import google.generativeai as genai
-import subprocess
 from dotenv import load_dotenv
-from tqdm import tqdm
 
 class TranscriptionHandler(FileSystemEventHandler):
     def __init__(self):
@@ -35,8 +33,8 @@ class TranscriptionHandler(FileSystemEventHandler):
             if file_path.endswith('.tmp'):
                 return
                 
-            # Only process audio files in the "Audio Record" folder
-            if not ('Audio Record' in file_path and file_path.endswith('.m4a')):
+            # Only process .m4a files
+            if not file_path.endswith('.m4a'):
                 return
                 
             # Skip if we're already processing this file
@@ -122,23 +120,20 @@ class TranscriptionHandler(FileSystemEventHandler):
                 return
                 
             filename = os.path.basename(file_path)
-            meeting_folder = os.path.dirname(os.path.dirname(file_path))
             file_size = os.path.getsize(file_path)
             timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             
-            # Create transcript folder
-            transcript_folder = os.path.join(meeting_folder, "transcript")
+            # Get base name without extension for folder name
+            base_name = os.path.splitext(filename)[0]
+            
+            # Create a folder for this transcription
+            transcript_folder = os.path.join(os.path.dirname(file_path), base_name)
             if not os.path.exists(transcript_folder):
                 os.makedirs(transcript_folder)
             
             # Define file paths
-            audio_copy_path = os.path.join(transcript_folder, filename)
-            wav_path = os.path.join(transcript_folder, f"{os.path.splitext(filename)[0]}.wav")
-            transcript_path = os.path.join(transcript_folder, f"{os.path.splitext(filename)[0]}.txt")
-            
-            # Copy original audio file
-            if not os.path.exists(audio_copy_path):
-                shutil.copy2(file_path, audio_copy_path)
+            wav_path = os.path.join(transcript_folder, "audio.wav")
+            transcript_path = os.path.join(transcript_folder, "transcript.md")
             
             # Convert to WAV
             self.convert_to_wav(file_path, wav_path)
@@ -156,7 +151,6 @@ class TranscriptionHandler(FileSystemEventHandler):
             
             logging.info(f"\n{'='*50}")
             logging.info(f"Audio file processed!")
-            logging.info(f"Meeting: {os.path.basename(meeting_folder)}")
             logging.info(f"File: {filename}")
             logging.info(f"Size: {file_size / 1024 / 1024:.2f} MB")
             logging.info(f"Time: {timestamp}")
@@ -206,7 +200,7 @@ if __name__ == "__main__":
     genai.configure(api_key=os.getenv('GOOGLE_API_KEY'))
     
     # Your Dropbox folder path
-    DROPBOX_PATH = "/Users/stewartalsop/Dropbox/Crazy Wisdom/Beautifully Broken/Zoom Folder"
+    DROPBOX_PATH = os.getenv('DROPBOX_PATH')
     
     try:
         monitor_folder(DROPBOX_PATH)
