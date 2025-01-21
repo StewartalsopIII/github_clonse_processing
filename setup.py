@@ -16,8 +16,7 @@ setup(
     version="0.1.0",
     author="Stewart Alsop",
     description="Tools for processing podcast recordings: transcription and title generation",
-    packages=find_packages(where="src"),
-    package_dir={"": "src"},
+    packages=find_packages(),
     python_requires=">=3.8",
     install_requires=[],  # Base requirements if any
     extras_require={
